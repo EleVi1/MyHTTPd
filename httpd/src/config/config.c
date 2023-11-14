@@ -117,6 +117,7 @@ static struct config *result(int error, int occ, struct config *conf, FILE *fp)
     int close = fclose(fp);
     if (close == 0 && occ == 1)
     {
+        conf->nb_servers = 1;
         return conf;
     }
     config_destroy(conf);
