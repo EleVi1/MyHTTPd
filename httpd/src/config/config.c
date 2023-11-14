@@ -11,7 +11,7 @@
 */
 struct config *parse_configuration(const char *path)
 {
-//TODO
+    // TODO
 }
 
 /*
@@ -21,5 +21,5 @@ struct config *parse_configuration(const char *path)
 */
 void config_destroy(struct config *config)
 {
-//TODO
+    // TODO
 }
