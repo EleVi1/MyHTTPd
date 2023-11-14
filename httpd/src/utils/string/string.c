@@ -31,8 +31,6 @@ int string_compare_n_str(const struct string *str1, const char *str2, size_t n)
         return 0;
     if (n > str1->size)
         return -1;
-    if (n == 0)
-        return 0;
     size_t i = 0;
     while (i < n)
     {
