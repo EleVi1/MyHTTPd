@@ -17,7 +17,7 @@
 */
 struct config
 {
-    char *pid_file; //Mandatory
+    char *pid_file;
     char *log_file;
     bool log;
 
@@ -36,10 +36,10 @@ struct config
 */
 struct server_config
 {
-    struct string *server_name; // Mandatory
-    char *port; // Mandatory
-    char *ip; // Mandatory
-    char *root_dir; // Mandatory
+    struct string *server_name;
+    char *port;
+    char *ip;
+    char *root_dir;
     char *default_file;
 };
 
