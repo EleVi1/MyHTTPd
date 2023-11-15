@@ -61,6 +61,8 @@ static int check_hosts(FILE *fp, struct config *conf)
             conf->servers->default_file = copy_value(line, 15, nread);
         }
     }
+    if (conf->servers->default_file == NULL)
+        conf->servers->default_file = "index.html";
     free(line);
     return (name == 1 && ifport == 1 && ifip == 1 && ifroot == 1);
 }
@@ -88,6 +90,10 @@ static int check_global(FILE *fp, struct config *conf)
         }
         if (strcmp(line, "[[vhosts]]\n") == 0)
         {
+            if (conf->log_file == NULL)
+            {
+                conf->log_file = "stdout";
+            }
             conf->nb_servers = 1;
             free(line);
             return (pidf == 1);
@@ -184,26 +190,24 @@ void config_destroy(struct config *config)
         }
         if (config->servers)
         {
-            for (size_t i = 0; i < config->nb_servers; i++)
+            string_destroy(config->servers->server_name);
+            if (config->servers->port)
             {
-                string_destroy(config->servers[i].server_name);
-                if (config->servers[i].port)
-                {
-                    free(config->servers[i].port);
-                }
-                if (config->servers[i].ip)
-                {
-                    free(config->servers[i].ip);
-                }
-                if (config->servers[i].root_dir)
-                {
-                    free(config->servers[i].root_dir);
-                }
-                if (config->servers[i].default_file)
-                {
-                    free(config->servers[i].default_file);
-                }
-                free(config->servers[i]);
+                free(config->servers->port);
+            }
+            if (config->servers->ip)
+            {
+                free(config->servers->ip);
+            }
+            if (config->servers->root_dir)
+            {
+                free(config->servers->root_dir);
+            }
+            if (config->servers->default_file)
+            {
+                free(config->servers->default_file);
+            }
+            free(config->servers);
         }
         free(config);
     }
