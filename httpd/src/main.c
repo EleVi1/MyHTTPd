@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "config/config.h"
+#include "server/server.h"
 
 static int switch_action(struct config *conf, char *action)
 {
@@ -81,7 +82,8 @@ int main(int argc, char *argv[])
         {
             errx(2, "http: invalid configuration file");
         }
-        return 0;
+        // TESTING BASIC SERVER
+        return main_server(conf);
         // Run server WITHOUT daemonizing it
     }
     // --dry-run and file
