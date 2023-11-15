@@ -88,6 +88,7 @@ static int check_global(FILE *fp, struct config *conf)
         }
         if (strcmp(line, "[[vhosts]]\n") == 0)
         {
+            conf->nb_servers = 1;
             free(line);
             return (pidf == 1);
         }
@@ -117,7 +118,6 @@ static struct config *result(int error, int occ, struct config *conf, FILE *fp)
     int close = fclose(fp);
     if (close == 0 && occ == 1)
     {
-        conf->nb_servers = 1;
         return conf;
     }
     config_destroy(conf);
@@ -184,24 +184,26 @@ void config_destroy(struct config *config)
         }
         if (config->servers)
         {
-            string_destroy(config->servers->server_name);
-            if (config->servers->port)
+            for (size_t i = 0; i < config->nb_servers; i++)
             {
-                free(config->servers->port);
-            }
-            if (config->servers->ip)
-            {
-                free(config->servers->ip);
-            }
-            if (config->servers->root_dir)
-            {
-                free(config->servers->root_dir);
-            }
-            if (config->servers->default_file)
-            {
-                free(config->servers->default_file);
-            }
-            free(config->servers);
+                string_destroy(config->servers[i].server_name);
+                if (config->servers[i].port)
+                {
+                    free(config->servers[i].port);
+                }
+                if (config->servers[i].ip)
+                {
+                    free(config->servers[i].ip);
+                }
+                if (config->servers[i].root_dir)
+                {
+                    free(config->servers[i].root_dir);
+                }
+                if (config->servers[i].default_file)
+                {
+                    free(config->servers[i].default_file);
+                }
+                free(config->servers[i]);
         }
         free(config);
     }
