@@ -22,8 +22,6 @@ static char *copy_value(char *line, int begin, int size)
 
 static int check_hosts(FILE *fp, struct config *conf)
 {
-    if (!conf->servers)
-        return 0;
     char *line = NULL;
     size_t len = 0;
     ssize_t nread;
@@ -31,38 +29,53 @@ static int check_hosts(FILE *fp, struct config *conf)
     int ifport = 0;
     int ifip = 0;
     int ifroot = 0;
+    struct server_config *tmp = conf->servers;
+    tmp += conf->nb_servers - 1;
     while ((nread = getline(&line, &len, fp)) != -1) // End of file
     {
         if (fnmatch("server_name = *", line, 0) == 0) // struct string
         {
             char *s = copy_value(line, 14, nread);
             struct string *serv = string_create(s, nread - 15);
-            conf->servers->server_name = serv;
+            tmp->server_name = serv;
             free(s);
             name = 1;
         }
         else if (fnmatch("port = *", line, 0) == 0)
         {
-            conf->servers->port = copy_value(line, 7, nread);
+            tmp->port = copy_value(line, 7, nread);
             ifport = 1;
         }
         else if (fnmatch("ip = *", line, 0) == 0)
         {
-            conf->servers->ip = copy_value(line, 5, nread);
+            tmp->ip = copy_value(line, 5, nread);
             ifip = 1;
         }
         else if (fnmatch("root_dir = *", line, 0) == 0)
         {
-            conf->servers->root_dir = copy_value(line, 11, nread);
+            tmp->root_dir = copy_value(line, 11, nread);
             ifroot = 1;
         }
         else if (fnmatch("default_file = *", line, 0) == 0)
         {
-            conf->servers->default_file = copy_value(line, 15, nread);
+            tmp->default_file = copy_value(line, 15, nread);
+        }
+        else if (strcmp("[[vhosts]]\n", line) == 0)
+        {
+            if (name == 1 && ifport == 1 && ifip == 1 && ifroot == 1)
+            {
+                conf->nb_servers++;
+                conf->servers =
+                    realloc(conf->servers,
+                            conf->nb_servers * sizeof(struct server_config));
+                free(line);
+                return check_hosts(fp, conf);
+            }
+            break;
         }
     }
-    if (conf->servers->default_file == NULL)
-        conf->servers->default_file = "index.html";
+    if (tmp->default_file == NULL)
+        tmp->default_file = "index.html";
     free(line);
     return (name == 1 && ifport == 1 && ifip == 1 && ifroot == 1);
 }
@@ -190,22 +203,23 @@ void config_destroy(struct config *config)
         }
         if (config->servers)
         {
-            string_destroy(config->servers->server_name);
-            if (config->servers->port)
+            struct server_config *tmp = config->servers;
+            for (size_t i = 0; i < config->nb_servers; i++)
             {
-                free(config->servers->port);
-            }
-            if (config->servers->ip)
-            {
-                free(config->servers->ip);
-            }
-            if (config->servers->root_dir)
-            {
-                free(config->servers->root_dir);
-            }
-            if (config->servers->default_file)
-            {
-                free(config->servers->default_file);
+                string_destroy(tmp->server_name);
+                if (tmp->port)
+                {
+                    free(tmp->port);
+                }
+                if (tmp->ip)
+                {
+                    free(tmp->ip);
+                }
+                if (tmp->root_dir)
+                {
+                    free(tmp->root_dir);
+                }
+                tmp = tmp + 1;
             }
             free(config->servers);
         }
