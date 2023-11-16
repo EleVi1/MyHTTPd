@@ -51,7 +51,7 @@ int initialize(char *ipv4, char *port)
     int res = getaddrinfo(ipv4, port, &hints, &server_info);
     if (res != 0)
     {
-        return -1; // error => to free
+        return -1;
     }
     // create socket and bind to the first possible
     tmp = server_info;
