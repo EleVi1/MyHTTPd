@@ -2,7 +2,7 @@ include flags.mk
 
 OBJ = main.o
 
-LIBS = config/libconfig.a server/libserver.a utils/libutils.a
+LIBS = config/libconfig.a server/libserver.a utils/libutils.a daemon/libdaemon.a
 
 all: httpd
 
@@ -17,5 +17,5 @@ httpd: $(OBJ) $(LIBS)
 include libs.mk
 
 clean:
-	$(RM) $(OBJS) $(LIBS)
+	$(RM) $(OBJS) $(LIBS) main.o ../httpd
 .PHONY: all

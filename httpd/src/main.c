@@ -7,31 +7,42 @@
 
 static int switch_action(struct config *conf, char *action)
 {
+    int res = 0;
     if (!conf)
         return 1;
     if (strcmp(action, "start") == 0)
     {
-        // TODO
-        return 0;
+        res = daemon_start(conf);
+        if (res == 0)
+        {
+            return main_server(conf);
+        }
+        return res;
     }
     else if (strcmp(action, "stop") == 0)
     {
-        // TODO
-        return 0;
+        res = daemon_stop(conf);
+        if (res == 0)
+        {
+            fprintf(stderr, "Stop: failed to stop\n");
+        }
     }
-    else if (strcmp(action, "reload") == 0)
+    else if (strcmp(action, "reload") == 0) // Bonus - part 2
     {
-        // TODO
         return 0;
     }
     else if (strcmp(action, "restart") == 0)
     {
-        // TODO
-        //  Stop and start
-        return 0;
+        res = daemon_restart(conf);
+        if (res == -1)
+            fprintf(stderr, "Stop: failed to stop\n");
+        else if (res == 0)
+        {
+            return main_server(conf);
+        }
+        return res;
     }
-    else
-        return 1;
+    return 1;
 }
 
 static int parse_input(int argc, char *argv[], struct config *conf)
@@ -81,10 +92,11 @@ int main(int argc, char *argv[])
         conf = parse_configuration(argv[1]);
         if (!conf)
         {
+            config_destroy(conf);
             errx(2, "http: invalid configuration file");
         }
+        // Run server without deamonizing it
         return main_server(conf);
-        // Run server WITHOUT daemonizing it
     }
     // --dry-run and file
     if (argc == 3)
@@ -94,6 +106,7 @@ int main(int argc, char *argv[])
             conf = parse_configuration(argv[2]);
             if (!conf)
             {
+                config_destroy(conf);
                 errx(2, "http: invalid configuration file");
             }
             printf("Valid configuration file\n");
@@ -101,5 +114,7 @@ int main(int argc, char *argv[])
         }
         return 1;
     }
-    return parse_input(argc, argv, conf);
+    int res = parse_input(argc, argv, conf);
+    config_destroy(conf);
+    return res;
 }

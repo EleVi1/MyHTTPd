@@ -1,5 +1,5 @@
 #define _POSIX_C_SOURCE 200809L
-#define BACKLOG 10
+#define BACKLOG 128
 
 #include "server.h"
 
@@ -54,15 +54,12 @@ int initialize(char *ipv4, char *port)
         return -1;
     }
     // create socket and bind to the first possible
-    tmp = server_info;
-    while (tmp != NULL)
+    for (tmp = server_info; tmp; tmp = tmp->ai_next)
     {
-        listening_sock =
-            socket(tmp->ai_family, tmp->ai_socktype, tmp->ai_protocol);
+        listening_sock = socket(tmp->ai_family, tmp->ai_socktype, 0);
         // Fail to socket
         if (listening_sock == -1)
         {
-            tmp = tmp->ai_next;
             perror("server: socket");
             continue;
         }
@@ -70,7 +67,7 @@ int initialize(char *ipv4, char *port)
                        sizeof(int))
             == -1)
         {
-            perror("setsockopt");
+            perror("server: setsockopt");
             exit(1);
         }
         // Fail to bind
@@ -78,7 +75,6 @@ int initialize(char *ipv4, char *port)
         {
             perror("server: bind");
             close(listening_sock);
-            tmp = tmp->ai_next;
             continue;
         }
         break; // Succeed to bind
@@ -86,7 +82,7 @@ int initialize(char *ipv4, char *port)
     freeaddrinfo(server_info);
     if (!tmp)
     {
-        fprintf(stderr, "server: failed to bind\n");
+        // fprintf(stderr, "server: failed to bind\n");
         return -1;
     }
     return listening_sock;
