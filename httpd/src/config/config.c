@@ -219,7 +219,8 @@ void config_destroy(struct config *config)
                 {
                     free(tmp->root_dir);
                 }
-                if (tmp->default_file)
+                if (tmp->default_file
+                    && strcmp(tmp->default_file, "index.html") != 0)
                 {
                     free(tmp->default_file);
                 }
