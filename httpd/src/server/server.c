@@ -1,5 +1,4 @@
 #define _POSIX_C_SOURCE 200809L
-#define BACKLOG 128
 
 #include "server.h"
 
@@ -7,20 +6,56 @@
 #include <stddef.h>
 
 // Do the echo action - Basic server
-void communicate(int client_sock)
+void communicate(int client_sock, struct config *conf)
 {
     char buff[1024] = { 0 };
     ssize_t nread;
-    while ((nread = recv(client_sock, buff, 1024, MSG_NOSIGNAL)) > 0)
+    struct string *input = string_create("", 0);
+    struct request *req;
+    size_t toread = 1024;
+    while ((nread = recv(client_sock, buff, toread, MSG_NOSIGNAL)) > 0)
     {
-        send(client_sock, buff, nread, MSG_NOSIGNAL);
+        string_concat_str(req, buff, nread);
+        if (toread == 1024)
+        {
+            req = parse_request(input, conf);
+            if (req != NULL)
+            {
+                if (req->error != 0)
+                {
+                    send_response(req, conf);
+                    return;
+                }
+                if (new->body_len > 0)
+                {
+                    toread = new->body_len;
+                }
+            }
+        }
+        else
+        {
+            toread -= nread;
+        }
+        if (toread == 0)
+        {
+            break;
+        }
+        // send(client_sock, buff, nread, MSG_NOSIGNAL);
     }
+    req = parse_request(input, conf);
+    send_response(req, conf);
     return;
 }
 
-void link_accept(int sockfd)
+void link_accept(int sockfd, struct config *conf)
 {
-    if (listen(sockfd, BACKLOG) == -1)
+    // Signal graceful shutdown
+    /*
+    struct sigaction sa;
+    sa.sa_flags = 0;
+    sa.sa_handler = handler;
+    */
+    if (listen(sockfd, SOMAXCONN) == -1)
     {
         return;
     }
@@ -30,7 +65,7 @@ void link_accept(int sockfd)
         client_sock = accept(sockfd, NULL, NULL);
         if (client_sock != -1)
         {
-            communicate(client_sock);
+            communicate(client_sock, conf);
             close(client_sock);
         }
     }
@@ -96,7 +131,7 @@ int main_server(struct config *conf)
         config_destroy(conf);
         return -1;
     }
-    link_accept(sockfd);
+    link_accept(sockfd, conf);
     close(sockfd);
     config_destroy(conf);
     return 0;

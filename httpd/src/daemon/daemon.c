@@ -102,8 +102,6 @@ int daemon_stop(struct config *conf)
 
 int daemon_restart(struct config *conf)
 {
-    int res = daemon_stop(conf);
-    if (res != 0)
-        return daemon_start(conf);
-    return -1;
+    daemon_stop(conf);
+    return daemon_start(conf);
 }

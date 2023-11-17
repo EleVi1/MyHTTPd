@@ -14,9 +14,10 @@
 #include <unistd.h>
 
 #include "../config/config.h"
+#include "../http/http.h"
 
-void communicate(int client_sock);
-void link_accept(int sockfd);
+void communicate(int client_sock, struct config *conf);
+void link_accept(int sockfd, struct config *conf);
 int initialize(char *ipv4, char *port);
 int main_server(struct config *conf);
 
