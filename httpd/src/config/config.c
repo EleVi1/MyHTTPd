@@ -219,6 +219,10 @@ void config_destroy(struct config *config)
                 {
                     free(tmp->root_dir);
                 }
+                if (tmp->default_file)
+                {
+                    free(tmp->default_file);
+                }
                 tmp = tmp + 1;
             }
             free(config->servers);

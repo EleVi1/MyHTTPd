@@ -22,10 +22,7 @@ static int switch_action(struct config *conf, char *action)
     else if (strcmp(action, "stop") == 0)
     {
         res = daemon_stop(conf);
-        if (res == 0)
-        {
-            fprintf(stderr, "Stop: failed to stop\n");
-        }
+        return res;
     }
     else if (strcmp(action, "reload") == 0) // Bonus - part 2
     {
@@ -47,6 +44,7 @@ static int switch_action(struct config *conf, char *action)
 
 static int parse_input(int argc, char *argv[], struct config *conf)
 {
+    int res = 0;
     if (argc == 5) // Full
     {
         if (strcmp(argv[1], "--dry-run") == 0)
@@ -73,7 +71,9 @@ static int parse_input(int argc, char *argv[], struct config *conf)
             errx(2, "http: invalid configuration file");
         if (strcmp("-a", argv[1]) == 0)
         {
-            return switch_action(conf, argv[2]);
+            res = switch_action(conf, argv[2]);
+            config_destroy(conf);
+            return res;
         }
         errx(1, "httpd: invalid command");
     }
@@ -110,11 +110,12 @@ int main(int argc, char *argv[])
                 errx(2, "http: invalid configuration file");
             }
             printf("Valid configuration file\n");
+            config_destroy(conf);
             return 0;
         }
         return 1;
     }
     int res = parse_input(argc, argv, conf);
-    config_destroy(conf);
+    // config_destroy(conf);
     return res;
 }
