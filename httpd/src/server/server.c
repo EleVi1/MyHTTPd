@@ -5,15 +5,14 @@
 #include <errno.h>
 #include <stddef.h>
 
-// Do the echo action - Basic server
+// Catch the request and respond
 void communicate(int client_sock, struct config *conf)
 {
     char buff[1024] = { 0 };
     ssize_t nread;
     struct string *input = string_create("", 0);
     struct request *req;
-    size_t toread = 1024;
-    while ((nread = recv(client_sock, buff, toread, MSG_NOSIGNAL)) > 0)
+    while ((nread = recv(client_sock, buff, 1024, MSG_NOSIGNAL)) > 0)
     {
         string_concat_str(input, buff, nread);
         if (toread == 1024)
@@ -26,19 +25,7 @@ void communicate(int client_sock, struct config *conf)
                     send_response(req);
                     return;
                 }
-                if (req->body_len > 0)
-                {
-                    toread = req->body_len;
-                }
             }
-        }
-        else
-        {
-            toread -= nread;
-        }
-        if (toread == 0)
-        {
-            break;
         }
         // send(client_sock, buff, nread, MSG_NOSIGNAL);
     }
@@ -49,17 +36,12 @@ void communicate(int client_sock, struct config *conf)
 
 void link_accept(int sockfd, struct config *conf)
 {
-    // Signal graceful shutdown
-    /*
-    struct sigaction sa;
-    sa.sa_flags = 0;
-    sa.sa_handler = handler;
-    */
     if (listen(sockfd, SOMAXCONN) == -1)
     {
         return;
     }
     int client_sock;
+    // Put signal handler TODO
     while (1)
     {
         client_sock = accept(sockfd, NULL, NULL);
