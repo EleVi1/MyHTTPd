@@ -17,6 +17,7 @@
 #include "../http/http.h"
 
 void communicate(int client_sock, struct config *conf);
+int send_response(struct request *req);
 void link_accept(int sockfd, struct config *conf);
 int initialize(char *ipv4, char *port);
 int main_server(struct config *conf);

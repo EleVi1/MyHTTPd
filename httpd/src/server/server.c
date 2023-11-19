@@ -15,16 +15,13 @@ void communicate(int client_sock, struct config *conf)
     while ((nread = recv(client_sock, buff, 1024, MSG_NOSIGNAL)) > 0)
     {
         string_concat_str(input, buff, nread);
-        if (toread == 1024)
+        req = parse_request(input, conf);
+        if (req != NULL)
         {
-            req = parse_request(input, conf);
-            if (req != NULL)
+            if (req->error != 0)
             {
-                if (req->error != 0)
-                {
-                    send_response(req);
-                    return;
-                }
+                send_response(req);
+                return;
             }
         }
         // send(client_sock, buff, nread, MSG_NOSIGNAL);
@@ -32,6 +29,13 @@ void communicate(int client_sock, struct config *conf)
     req = parse_request(input, conf);
     send_response(req);
     return;
+}
+
+int send_response(struct request *req)
+{
+    if (req->error != 0)
+        errx(req->error, "KO");
+    errx(200, "OK");
 }
 
 void link_accept(int sockfd, struct config *conf)

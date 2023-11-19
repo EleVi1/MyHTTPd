@@ -306,14 +306,6 @@ struct request *parse_request(struct string *input, struct config *config)
     return NULL;
 }
 
-// TODO
-int send_response(struct request *request)
-{
-    if (request)
-        return 0;
-    return 1;
-}
-
 void free_request(struct request *request)
 {
     if (request)
