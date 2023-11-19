@@ -28,7 +28,7 @@ struct request
 };
 
 struct request *parse_request(struct string *input, struct config *config);
-int send_request(struct request *req, struct config *conf);
+int send_response(struct request *req);
 void free_request(struct request *request);
 
 #endif /* !HTTP_H*/

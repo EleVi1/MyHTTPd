@@ -15,7 +15,7 @@ void communicate(int client_sock, struct config *conf)
     size_t toread = 1024;
     while ((nread = recv(client_sock, buff, toread, MSG_NOSIGNAL)) > 0)
     {
-        string_concat_str(req, buff, nread);
+        string_concat_str(input, buff, nread);
         if (toread == 1024)
         {
             req = parse_request(input, conf);
@@ -23,12 +23,12 @@ void communicate(int client_sock, struct config *conf)
             {
                 if (req->error != 0)
                 {
-                    send_response(req, conf);
+                    send_response(req);
                     return;
                 }
-                if (new->body_len > 0)
+                if (req->body_len > 0)
                 {
-                    toread = new->body_len;
+                    toread = req->body_len;
                 }
             }
         }
@@ -43,7 +43,7 @@ void communicate(int client_sock, struct config *conf)
         // send(client_sock, buff, nread, MSG_NOSIGNAL);
     }
     req = parse_request(input, conf);
-    send_response(req, conf);
+    send_response(req);
     return;
 }
 
@@ -95,20 +95,20 @@ int initialize(char *ipv4, char *port)
         // Fail to socket
         if (listening_sock == -1)
         {
-            perror("server: socket");
+            // perror("server: socket");
             continue;
         }
         if (setsockopt(listening_sock, SOL_SOCKET, SO_REUSEADDR, &oui,
                        sizeof(int))
             == -1)
         {
-            perror("server: setsockopt");
+            // perror("server: setsockopt");
             exit(1);
         }
         // Fail to bind
         if (bind(listening_sock, tmp->ai_addr, tmp->ai_addrlen) == -1)
         {
-            perror("server: bind");
+            // perror("server: bind");
             close(listening_sock);
             continue;
         }

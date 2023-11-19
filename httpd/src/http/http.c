@@ -114,6 +114,8 @@ static struct request *check_line1(char *line, struct request *req)
 // TO CONTINUE
 struct request *parse_request(struct string *input, struct config *config)
 {
+    if (!config)
+        return NULL;
     int line_nb = 0;
     char *line = NULL;
     size_t begin = 0;

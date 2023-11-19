@@ -33,7 +33,7 @@ int daemon_start(struct config *conf)
         fwrite(new_pid, 1, strlen(new_pid), fp);
         free(new_pid);
         fclose(fp);
-        return 1;
+        return 1; // 0 instead ??
     }
     char *line = NULL;
     size_t len = 0;
@@ -46,7 +46,7 @@ int daemon_start(struct config *conf)
         {
             free(line);
             fclose(fp);
-            return 1;
+            return 1; // 0 instead ??
         }
     }
     free(line);
@@ -66,7 +66,7 @@ int daemon_start(struct config *conf)
     fwrite(new_pid, 1, strlen(new_pid), fp);
     free(new_pid);
     fclose(fp);
-    return 1;
+    return 1; // 0 instead ??
 }
 
 // Check if the file exists and if the process is ALIVE
