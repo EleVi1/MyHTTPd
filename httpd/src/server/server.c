@@ -18,20 +18,27 @@ void communicate(int client_sock, struct config *conf)
         req = parse_request(input, conf);
         if (req != NULL)
         {
-            send_response(client_sock, req);
+            if (req->error == 0)
+            {
+                req->error = 200; // OK
+            }
+            log_write(conf, req, "Received");
+            send_response(client_sock, conf, req);
             close(client_sock);
             return;
         }
         // send(client_sock, buff, nread, MSG_NOSIGNAL);
     }
-    req = parse_request(input, conf);
-    send_response(client_sock, req);
+    // req = parse_request(input, conf);
+    // send_response(client_sock, conf, req, fd);
     close(client_sock);
     return;
 }
 
-int send_response(int client_sock, struct request *req)
+int send_response(int client_sock, struct config *conf, struct request *req)
 {
+    if (!conf)
+        return -1;
     if (req->error != 0)
     {
         send(client_sock, "KO", 2, MSG_NOSIGNAL);
@@ -54,6 +61,7 @@ void link_accept(int sockfd, struct config *conf)
         client_sock = accept(sockfd, NULL, NULL);
         if (client_sock != -1)
         {
+            create_logfile(conf);
             communicate(client_sock, conf);
             close(client_sock);
         }

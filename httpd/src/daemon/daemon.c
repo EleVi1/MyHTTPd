@@ -15,7 +15,8 @@ int daemon_start(struct config *conf)
         pid = fork();
         if (pid == -1 || pid == 0)
         {
-            return (pid == -1) ? 1 : 0;
+            free(new_pid);
+            return (pid == -1) ? -1 : 0;
         }
         // In the parent: store the pid
         fp = fopen(conf->pid_file, "w+");
@@ -35,8 +36,9 @@ int daemon_start(struct config *conf)
         if (kill(pid, 0) != -1) // Process alive
         {
             free(line);
+            free(new_pid);
             fclose(fp);
-            return 1;
+            return -1;
         }
     }
     free(line);
@@ -44,11 +46,13 @@ int daemon_start(struct config *conf)
     pid = fork();
     if (pid == -1)
     {
-        return 1;
+        free(new_pid);
+        return -1;
     }
     if (pid == 0) // in child
     {
-        return 1; // Launch server
+        free(new_pid);
+        return 0; // Launch server
     }
     // In the parent, store the pid
     fp = fopen(conf->pid_file, "w+");
@@ -56,7 +60,7 @@ int daemon_start(struct config *conf)
     fwrite(new_pid, 1, strlen(new_pid), fp);
     free(new_pid);
     fclose(fp);
-    return 0;
+    return 1;
 }
 
 // Check if the file exists and if the process is ALIVE
@@ -93,5 +97,6 @@ int daemon_stop(struct config *conf)
 int daemon_restart(struct config *conf)
 {
     daemon_stop(conf);
-    return daemon_start(conf);
+    int res = daemon_start(conf);
+    return (res == 0) ? 0 : 1;
 }

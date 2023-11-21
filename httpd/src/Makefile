@@ -2,7 +2,7 @@ include flags.mk
 
 OBJ = main.o
 
-LIBS = config/libconfig.a server/libserver.a utils/libutils.a daemon/libdaemon.a http/libhttp.a
+LIBS = config/libconfig.a server/libserver.a utils/libutils.a daemon/libdaemon.a http/libhttp.a logger/liblogger.a
 
 all: httpd
 
@@ -17,6 +17,7 @@ clean:
 	$(MAKE) clean -C daemon
 	$(MAKE) clean -C utils
 	$(MAKE) clean -C server
+	$(MAKE) clean -C logger
 	$(RM) $(OBJ)
 
 .PHONY: all clean

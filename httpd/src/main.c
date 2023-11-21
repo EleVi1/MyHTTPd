@@ -3,6 +3,7 @@
 
 #include "config/config.h"
 #include "daemon/daemon.h"
+#include "logger/logger.h"
 #include "server/server.h"
 
 static int switch_action(struct config *conf, char *action)
@@ -17,7 +18,11 @@ static int switch_action(struct config *conf, char *action)
         {
             return main_server(conf);
         }
-        return res;
+        if (res == -1)
+        {
+            return 1;
+        }
+        return 0;
     }
     else if (strcmp(action, "stop") == 0)
     {

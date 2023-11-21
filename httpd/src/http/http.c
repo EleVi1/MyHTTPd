@@ -2,6 +2,8 @@
 
 #include "http.h"
 
+#include "../logger/logger.h"
+
 static size_t str_len(char *s)
 {
     size_t i = 0;
@@ -347,5 +349,6 @@ void free_request(struct request *request)
         {
             free(request->host_name);
         }
+        free(request);
     }
 }

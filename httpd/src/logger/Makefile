@@ -4,7 +4,7 @@ MODULE = logger
 OBJ = $(MODULE).o
 LIB = lib$(MODULE).a
 
-LIBS = # Other modules your library may be dependent on
+LIBS = libconfig.a libserver.a # Other modules your library may be dependent on
 
 LDLIBS = -lcriterion
 
