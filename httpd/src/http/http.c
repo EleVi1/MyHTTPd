@@ -14,9 +14,8 @@ static size_t str_len(char *s)
 
 // Store the string before \r\n
 // if not return NULL
-char *parse_line(struct string *str, size_t *begin)
+char *parse_line(struct string *str, size_t *begin, size_t *len)
 {
-    size_t len = 0;
     size_t j = 0;
     size_t i = *begin;
     char *res = calloc(str->size, sizeof(char));
@@ -24,6 +23,7 @@ char *parse_line(struct string *str, size_t *begin)
     {
         res = realloc(res, 3);
         res[j] = '\r';
+        *len = 3;
         res[j + 1] = '\n';
         return res;
     }
@@ -33,7 +33,7 @@ char *parse_line(struct string *str, size_t *begin)
         {
             if (i + 1 < str->size && str->data[i + 1] == '\n')
             {
-                res = realloc(res, len + 1);
+                res = realloc(res, *(len) + 1);
                 *begin = i + 2;
                 return res;
             }
@@ -41,7 +41,7 @@ char *parse_line(struct string *str, size_t *begin)
             return NULL;
         }
         res[j] = str->data[i];
-        len++;
+        *(len) += 1;
         i++;
         j++;
     }
@@ -132,14 +132,34 @@ static struct request *fill_length(char *line, struct request *req)
         }
         i++;
     }
-    // Correct =>store the content length
     req->body_len = atoi(line);
+    return req;
+}
+
+static size_t get_len(char *line, char delim)
+{
+    size_t i = 0;
+    while (line[i] != delim)
+    {
+        i++;
+    }
+    return i;
+}
+
+static struct request *fill_name(struct request *req, struct string *c)
+{
+    char *res = calloc(c->size, sizeof(char));
+    for (size_t i = 0; i < c->size; i++)
+    {
+        res[i] = c->data[i];
+    }
+    req->host_name = res;
     return req;
 }
 
 // Host: [ <server_name> | <IP address> | <IP>:<Port> ]
 static struct request *check_host(char *line, struct request *req,
-                                  struct config *conf)
+                                  struct config *conf, size_t *len)
 {
     struct server_config *tmp = conf->servers;
     char *copy = line;
@@ -147,27 +167,41 @@ static struct request *check_host(char *line, struct request *req,
     size_t i = 0;
     while (i < n)
     {
-        if (strcmp(line, tmp->server_name->data) == 0)
+        if (string_compare_n_str(tmp->server_name, line, *len) == 0)
         {
-            req->host_name = line;
+            req = fill_name(req, tmp->server_name);
             return req;
         }
         if (strcmp(line, tmp->ip) == 0)
         {
-            req->host_name = line;
+            req = fill_name(req, tmp->server_name);
             return req;
         }
         if (fnmatch("*:*", line, 0) == 0)
         {
-            if (memcmp(tmp->ip, line, strlen(tmp->ip)) == 0)
+            size_t len = get_len(line, ':');
+            char *val = NULL;
+            if (len == str_len(tmp->ip)) // check IP address
             {
-                copy += (strcspn(line, ":") + 1);
-                if (memcmp(tmp->port, copy, strlen(tmp->ip)) == 0)
+                val = calloc(len, sizeof(char));
+                val = memcpy(val, line, len);
+                if (memcmp(tmp->ip, val, len) == 0)
                 {
-                    req->host_name = tmp->server_name->data;
-                    return req;
+                    copy += (strcspn(line, ":") + 1);
+                    len = get_len(copy, '\0');
+                    if (len == str_len(tmp->port)) // check port value
+                    {
+                        val = memcpy(val, copy, len);
+                        if (memcmp(tmp->port, val, len) == 0)
+                        {
+                            req = fill_name(req, tmp->server_name);
+                            free(val);
+                            return req;
+                        }
+                        copy = line;
+                    }
                 }
-                copy = line;
+                free(val);
             }
             return req;
         }
@@ -178,12 +212,12 @@ static struct request *check_host(char *line, struct request *req,
 }
 
 static struct request *check_headers(char *input, struct request *req,
-                                     struct config *conf)
+                                     struct config *conf, size_t *len)
 {
     char *line = input;
     if (fnmatch("Content-Length: *", line, 0) == 0)
     {
-        if (str_len(input) > 16)
+        if (*len > 16)
         {
             line += (strcspn(line, " ") + 1);
             req = fill_length(line, req);
@@ -199,7 +233,7 @@ static struct request *check_headers(char *input, struct request *req,
         if (str_len(input) > 6)
         {
             line += (strcspn(line, " ") + 1);
-            req = check_host(line, req, conf);
+            req = check_host(line, req, conf, len);
         }
         else
         {
@@ -230,24 +264,17 @@ static size_t fetch_begin(struct string *input)
     return 0;
 }
 
-// Store everything after /r/n/r/n
-static char *get_message(char *msg, struct string *input, struct request *req)
+// Count if there are enough characters after /r/n/r/n
+static int msg_is_ok(struct string *input, struct request *req)
 {
     size_t begin = fetch_begin(input);
-    char *str = input->data + begin;
-    if (strlen(str) < req->body_len)
+    if (input->size - begin < req->body_len)
     {
-        msg = NULL;
-        return msg;
+        return -1;
     }
-    for (size_t i = 0; i < req->body_len; i++)
-    {
-        msg[i] = str[i];
-    }
-    return msg;
+    return 0;
 }
 
-// TO CONTINUE
 // Find a way to detect a ligne with only /r/n
 struct request *parse_request(struct string *input, struct config *config)
 {
@@ -256,17 +283,19 @@ struct request *parse_request(struct string *input, struct config *config)
     int line_nb = 0;
     char *line = "";
     size_t begin = 0;
+    size_t len = 0;
     struct request *req = calloc(1, sizeof(struct request));
-    while ((line = parse_line(input, &begin)) != NULL
+    while ((line = parse_line(input, &begin, &len)) != NULL
            && strcmp("\r\n", line) != 0)
     {
         if (line_nb == 0) // Request line
         {
             req = check_line1(line, req);
+            line_nb++;
         }
         else // Field line
         {
-            req = check_headers(line, req, config);
+            req = check_headers(line, req, config, &len);
         }
         if (req->error != 0)
         {
@@ -274,35 +303,35 @@ struct request *parse_request(struct string *input, struct config *config)
             return req;
         }
         free(line);
+        len = 0;
         continue;
     }
     if (strcmp(line, "\r\n") == 0)
     {
         if (req->host_name != NULL && req->target != NULL)
         {
+            free(line);
             if (req->body_len == 0)
             {
                 return req;
             }
-            char *msg = calloc(req->body_len, sizeof(char));
-            msg = get_message(msg, input, req);
-            if (msg == NULL)
+            if (msg_is_ok(input, req) != 0)
             {
                 free(req);
-                free(msg);
                 return NULL;
             }
-            req->body = msg;
             return req;
         }
         else
         {
             req->error = 400; // Bad request
+            free(line);
             return req;
         }
     }
     // not a finished line or CRLF headers ending
     free(req);
+    free(line);
     return NULL;
 }
 
@@ -310,13 +339,13 @@ void free_request(struct request *request)
 {
     if (request)
     {
-        if (request->body)
-        {
-            free(request->body);
-        }
         if (request->target)
         {
             free(request->target);
+        }
+        if (request->host_name)
+        {
+            free(request->host_name);
         }
     }
 }

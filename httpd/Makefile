@@ -10,4 +10,8 @@ $(BINARY):
 	$(MAKE) -C src
 	mv src/$(BINARY) .
 
-.PHONY: all
+clean:
+	$(MAKE) clean -C src
+	$(RM) $(BINARY)
+
+.PHONY: all clean

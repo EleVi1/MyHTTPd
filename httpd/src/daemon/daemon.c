@@ -4,16 +4,6 @@
 
 #include "../utils/itoa/itoa.h"
 
-/*static char *parse(char *line, ssize_t len)
-{
-    char *res = calloc(len, sizeof(char));
-    for (int i = 0; i < len; i++)
-    {
-        res[i] = line[i];
-    }
-    return res;
-}*/
-
 int daemon_start(struct config *conf)
 {
     pid_t pid = -1;
@@ -33,7 +23,7 @@ int daemon_start(struct config *conf)
         fwrite(new_pid, 1, strlen(new_pid), fp);
         free(new_pid);
         fclose(fp);
-        return 1; // 0 instead ??
+        return 1;
     }
     char *line = NULL;
     size_t len = 0;
@@ -46,7 +36,7 @@ int daemon_start(struct config *conf)
         {
             free(line);
             fclose(fp);
-            return 1; // 0 instead ??
+            return 1;
         }
     }
     free(line);
@@ -58,7 +48,7 @@ int daemon_start(struct config *conf)
     }
     if (pid == 0) // in child
     {
-        return 0; // Launch server
+        return 1; // Launch server
     }
     // In the parent, store the pid
     fp = fopen(conf->pid_file, "w+");
@@ -66,7 +56,7 @@ int daemon_start(struct config *conf)
     fwrite(new_pid, 1, strlen(new_pid), fp);
     free(new_pid);
     fclose(fp);
-    return 1; // 0 instead ??
+    return 0;
 }
 
 // Check if the file exists and if the process is ALIVE

@@ -24,7 +24,6 @@ struct request
     char *host_name;
     char *target;
     size_t body_len;
-    char *body;
 };
 
 struct request *parse_request(struct string *input, struct config *config);

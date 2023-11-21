@@ -68,12 +68,14 @@ static int parse_input(int argc, char *argv[], struct config *conf)
     {
         conf = parse_configuration(argv[3]);
         if (!conf)
+        {
             return 2;
-            //errx(2, "http: invalid configuration file");
+        }
+        // errx(2, "http: invalid configuration file");
         if (strcmp("-a", argv[1]) == 0)
         {
             res = switch_action(conf, argv[2]);
-            config_destroy(conf);
+            // config_destroy(conf);
             return res;
         }
         errx(1, "httpd: invalid command");
@@ -110,7 +112,7 @@ int main(int argc, char *argv[])
                 config_destroy(conf);
                 errx(2, "http: invalid configuration file");
             }
-            //printf("Valid configuration file\n");
+            // printf("Valid configuration file\n");
             config_destroy(conf);
             return 0;
         }

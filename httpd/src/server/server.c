@@ -11,31 +11,34 @@ void communicate(int client_sock, struct config *conf)
     char buff[1024] = { 0 };
     ssize_t nread;
     struct string *input = string_create("", 0);
-    struct request *req;
+    struct request *req = NULL;
     while ((nread = recv(client_sock, buff, 1024, MSG_NOSIGNAL)) > 0)
     {
         string_concat_str(input, buff, nread);
         req = parse_request(input, conf);
         if (req != NULL)
         {
-            if (req->error != 0)
-            {
-                send_response(req);
-                return;
-            }
+            send_response(client_sock, req);
+            close(client_sock);
+            return;
         }
         // send(client_sock, buff, nread, MSG_NOSIGNAL);
     }
     req = parse_request(input, conf);
-    send_response(req);
+    send_response(client_sock, req);
+    close(client_sock);
     return;
 }
 
-int send_response(struct request *req)
+int send_response(int client_sock, struct request *req)
 {
     if (req->error != 0)
-        errx(req->error, "KO");
-    errx(200, "OK");
+    {
+        send(client_sock, "KO", 2, MSG_NOSIGNAL);
+        return req->error;
+    }
+    send(client_sock, "OK", 2, MSG_NOSIGNAL);
+    return 0;
 }
 
 void link_accept(int sockfd, struct config *conf)

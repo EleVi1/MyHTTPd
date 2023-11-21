@@ -103,10 +103,6 @@ static int check_global(FILE *fp, struct config *conf)
         }
         if (strcmp(line, "[[vhosts]]\n") == 0)
         {
-            if (conf->log_file == NULL)
-            {
-                conf->log_file = "stdout";
-            }
             conf->nb_servers = 1;
             free(line);
             return (pidf == 1);
@@ -194,7 +190,7 @@ struct config *parse_configuration(const char *path)
 */
 void config_destroy(struct config *config)
 {
-    if (config)
+    if (config != NULL)
     {
         free(config->pid_file);
         if (config->log_file)
