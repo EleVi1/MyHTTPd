@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
         errx(1, "Fail to create epoll");
     }
     struct epoll_event *evmts = calloc(1, sizeof(struct epoll_event));
-    evmts->events = EPOLLET;
+    evmts->events = EPOLLET | EPOLLIN;
     int fd = open(argv[1], O_RDONLY);
     int ctl = epoll_ctl(file, EPOLL_CTL_ADD, fd, evmts); // 0 for stdin
     if (ctl == -1)
@@ -28,35 +28,40 @@ int main(int argc, char *argv[])
         return -1;
     }
     int res;
-    char str[80] = { 0 };
+    char *str = calloc(80, sizeof(char));
     while (1)
     {
         res = epoll_wait(file, evmts, 1, -1);
-        if (res == -1 || res == 0)
+        if (EPOLLIN & evmts->events)
         {
-            break;
-        }
-        read(fd, str, 80);
-        if (strcmp(str, "ping") == 0)
-        {
-            printf("pong!\n");
-        }
-        else if (strcmp(str, "pong") == 0)
-        {
-            printf("ping!\n");
-        }
-        else if (strcmp(str, "quit") == 0)
-        {
-            printf("quit\n");
-            res = 0;
-            break;
-        }
-        else if (strcmp(str, "") != 0)
-        {
-            printf("Unknown: %s\n", str);
+            if (res == -1 || res == 0)
+            {
+                break;
+            }
+            read(fd, str, 80);
+            if (strcmp(str, "ping") == 0)
+            {
+                printf("pong!\n");
+            }
+            else if (strcmp(str, "pong") == 0)
+            {
+                printf("ping!\n");
+            }
+            else if (strcmp(str, "quit") == 0)
+            {
+                printf("quit\n");
+                res = 0;
+                break;
+            }
+            else if (strcmp(str, "") != 0)
+            {
+                printf("Unknown: %s\n", str);
+            }
+            memset(str, 0, 80);
         }
     }
     free(evmts);
+    free(str);
     close(fd);
     return (res == -1) ? 1 : 0;
 }
