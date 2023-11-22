@@ -60,6 +60,7 @@ int main(int argc, char *argv[])
             memset(str, 0, 80);
         }
     }
+    epoll_ctl(file, EPOLL_CTL_DEL, fd, evmts);
     free(evmts);
     free(str);
     close(fd);
