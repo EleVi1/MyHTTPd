@@ -75,12 +75,12 @@ static void write_recv(struct request *req, struct config *conf)
         if (fd)
         {
             fprintf(fd, "%s [%s] received HEAD on '%s' from <Client IP>\n", buf,
-                    server_name, req->target);
+                    server_name, req->target->data);
         }
         else
         {
             printf("%s [%s] received HEAD on '%s' from <Client IP>\n", buf,
-                   server_name, req->target);
+                   server_name, req->target->data);
         }
     }
     else
@@ -88,12 +88,12 @@ static void write_recv(struct request *req, struct config *conf)
         if (fd)
         {
             fprintf(fd, "%s [%s] received GET on '%s' from <Client IP>\n", buf,
-                    server_name, req->target);
+                    server_name, req->target->data); // struct string
         }
         else
         {
             printf("%s [%s] received GET on '%s' from <Client IP>\n", buf,
-                   server_name, req->target);
+                   server_name, req->target->data);
         }
     }
     if (fd)

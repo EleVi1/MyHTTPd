@@ -98,5 +98,5 @@ int daemon_restart(struct config *conf)
 {
     daemon_stop(conf);
     int res = daemon_start(conf);
-    return (res == 0) ? 0 : 1;
+    return (res == 0 || res == 1) ? 0 : 1;
 }

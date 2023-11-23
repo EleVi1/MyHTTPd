@@ -22,7 +22,7 @@ struct request
     enum method type;
     int error;
     char *host_name;
-    char *target;
+    struct string *target;
     size_t body_len;
 };
 

@@ -59,7 +59,10 @@ static struct request *check_version(struct request *req, char *line)
     }
     else
     {
-        req->error = 505;
+        if (req->error == 0)
+        {
+            req->error = 505;
+        }
     }
     return req;
 }
@@ -83,7 +86,6 @@ static struct request *check_line1(char *line, struct request *req)
     else
     {
         req->error = 405; // Method not allowed
-        return req;
     }
     size_t offset = strcspn(line, " ");
     tmp = tmp - offset - 1;
@@ -106,7 +108,8 @@ static struct request *check_line1(char *line, struct request *req)
         url[i] = line[i];
     }
     url[url_size] = '\0';
-    req->target = url;
+    struct string *tar = string_create(url, url_size + 1);
+    req->target = tar;
     line = line + url_size + 1;
     if (strcspn(line, " ") == 0)
     {
@@ -116,10 +119,14 @@ static struct request *check_line1(char *line, struct request *req)
     }
     else if (strcmp("HTTP/1.1", line) == 0)
     {
+        free(url);
         return req;
     }
     else
+    {
+        free(url);
         return check_version(req, line);
+    }
 }
 
 // Check content_length
@@ -131,6 +138,7 @@ static struct request *fill_length(char *line, struct request *req)
         if (line[i] < '0' || line[i] > '9')
         {
             req->error = 400;
+            return req;
         }
         i++;
     }
@@ -217,7 +225,7 @@ static struct request *check_headers(char *input, struct request *req,
                                      struct config *conf, size_t *len)
 {
     char *line = input;
-    if (fnmatch("Content-Length: *", line, 0) == 0)
+    if (fnmatch("Content-Length: *", line, 0) == 0) // FNM_CASEFOLD
     {
         if (*len > 16)
         {
@@ -230,7 +238,7 @@ static struct request *check_headers(char *input, struct request *req,
         }
         return req;
     }
-    if (fnmatch("Host: *", line, 0) == 0)
+    if (fnmatch("Host: *", line, 0) == 0) // FNM_CASEFOLD
     {
         if (str_len(input) > 6)
         {
@@ -299,7 +307,7 @@ struct request *parse_request(struct string *input, struct config *config)
         {
             req = check_headers(line, req, config, &len);
         }
-        if (req->error != 0)
+        if (req->error == 400) // Only format error we break
         {
             free(line);
             return req;
@@ -343,7 +351,7 @@ void free_request(struct request *request)
     {
         if (request->target)
         {
-            free(request->target);
+            string_destroy(request->target);
         }
         if (request->host_name)
         {

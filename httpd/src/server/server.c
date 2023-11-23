@@ -4,6 +4,7 @@
 
 #include <errno.h>
 #include <stddef.h>
+#include <time.h>
 
 // Catch the request and respond
 void communicate(int client_sock, struct config *conf)
@@ -22,7 +23,7 @@ void communicate(int client_sock, struct config *conf)
             {
                 req->error = 200; // OK
             }
-            log_write(conf, req, "Received");
+            //log_write(conf, req, "Received");
             send_response(client_sock, conf, req);
             close(client_sock);
             return;
@@ -35,16 +36,62 @@ void communicate(int client_sock, struct config *conf)
     return;
 }
 
+int send_error(int client_sock, struct request *req)
+{
+    struct string *resp =string_create("HTTP/1.1 ", 9);
+    if (req->error == 200)
+    {
+        string_concat_str(resp, " 200 OK\r\n", 9);
+    }
+    else if (req->error == 400)
+    {
+        string_concat_str(resp, " 400 Bad Request\r\n", 18);
+    }
+    else if (req->error == 405)
+    {
+        string_concat_str(resp, " 405 Method Not Allowed\r\n", 25);
+    }
+    else if (req->error == 505)
+    {
+        string_concat_str(resp, " 505 HTTP Version Not Supported\r\n", 33);
+    }
+    else if (req->error == 403)
+    {
+        string_concat_str(resp, " 403 Forbidden\r\n", 16);
+    }
+    else if (req->error == 404)
+    {
+        string_concat_str(resp, " 404 Not found\r\n", 16);
+    }
+    char buf[1000];
+    time_t now = time(0);
+    struct tm tm = *gmtime(&now);
+    strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S %Z", &tm);
+    string_concat_str(resp, buf, strlen(buf));
+    string_concat_str(resp, "\r\n", 2);
+    send(client_sock, resp->data, resp->size, MSG_NOSIGNAL);
+    return 0;
+}
+
+int send_correct(int client_sock, struct config *conf, struct request *req)
+{
+    if (client_sock && conf && req)
+    {
+        return 0;
+    }
+    return 1;
+}
+
 int send_response(int client_sock, struct config *conf, struct request *req)
 {
     if (!conf)
         return -1;
-    if (req->error != 0)
+    if (req->error != 200)
     {
-        send(client_sock, "KO", 2, MSG_NOSIGNAL);
-        return req->error;
+        send_error(client_sock, req);
+        return 1;
     }
-    send(client_sock, "OK", 2, MSG_NOSIGNAL);
+    send_correct(client_sock, conf, req);
     return 0;
 }
 
