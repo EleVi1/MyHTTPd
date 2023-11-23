@@ -7,4 +7,4 @@ BIN = epoll
 epoll: $(BIN)
 
 clean:
-	$(RM) $(BIN) $(OBJ)
+	$(RM) -rf $(BIN) $(OBJ) 
