@@ -3,7 +3,9 @@
 #include "server.h"
 
 #include <errno.h>
+#include <fcntl.h>
 #include <stddef.h>
+#include <sys/stat.h>
 #include <time.h>
 
 // Catch the request and respond
@@ -23,7 +25,7 @@ void communicate(int client_sock, struct config *conf)
             {
                 req->error = 200; // OK
             }
-            //log_write(conf, req, "Received");
+            // log_write(conf, req, "Received");
             send_response(client_sock, conf, req);
             close(client_sock);
             return;
@@ -36,14 +38,10 @@ void communicate(int client_sock, struct config *conf)
     return;
 }
 
-int send_error(int client_sock, struct request *req)
+static int send_error(int client_sock, struct request *req)
 {
-    struct string *resp =string_create("HTTP/1.1 ", 9);
-    if (req->error == 200)
-    {
-        string_concat_str(resp, " 200 OK\r\n", 9);
-    }
-    else if (req->error == 400)
+    struct string *resp = string_create("HTTP/1.1 ", 9);
+    if (req->error == 400)
     {
         string_concat_str(resp, " 400 Bad Request\r\n", 18);
     }
@@ -70,16 +68,50 @@ int send_error(int client_sock, struct request *req)
     string_concat_str(resp, buf, strlen(buf));
     string_concat_str(resp, "\r\n", 2);
     send(client_sock, resp->data, resp->size, MSG_NOSIGNAL);
+    string_destroy(resp);
     return 0;
 }
 
-int send_correct(int client_sock, struct config *conf, struct request *req)
+static size_t str_len(char *s)
 {
-    if (client_sock && conf && req)
+    size_t i = 0;
+    while (s[i] != '\0')
     {
-        return 0;
+        i++;
     }
-    return 1;
+    return i;
+}
+
+static int send_correct(int client_sock, struct config *conf,
+                        struct request *req)
+{
+    struct stat sb;
+    struct string *name = string_create(conf->servers->root_dir,
+                                        str_len(conf->servers->root_dir));
+    string_concat_str(name, req->target->data, req->target->size);
+    int stated = stat(name->data, &sb);
+    if (stated == -1) // Doesn't exist
+    {
+        req->error = 404;
+        string_destroy(name);
+        return send_error(client_sock, req);
+    }
+    int fd = open(name->data, O_RDONLY);
+    if (fd == -1)
+    {
+        req->error = 403;
+        string_destroy(name);
+        return send_error(client_sock, req);
+    }
+    struct string *resp = string_create("HTTP/1.1 200 OK\r\n", 17);
+    char buf[1000];
+    time_t now = time(0);
+    struct tm tm = *gmtime(&now);
+    strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S %Z", &tm);
+    string_concat_str(resp, buf, strlen(buf));
+    string_concat_str(resp, "\r\n", 2);
+    string_destroy(resp);
+    return 0;
 }
 
 int send_response(int client_sock, struct config *conf, struct request *req)
