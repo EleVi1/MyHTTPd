@@ -29,20 +29,33 @@ static int switch_action(struct config *conf, char *action)
         res = daemon_stop(conf);
         return res;
     }
-    else if (strcmp(action, "reload") == 0) // Bonus - part 2
+    else if (strcmp(action, "reload") == 0)
     {
         return 0;
     }
     else if (strcmp(action, "restart") == 0)
     {
-        res = daemon_restart(conf);
+        daemon_stop(conf);
+        res = daemon_start(conf);
+        if (res == 0)
+        {
+            return main_server(conf);
+        }
         if (res == -1)
-            fprintf(stderr, "Stop: failed to stop\n");
+        {
+            return 1;
+        }
+        return 0;
+        /*res = daemon_restart(conf);
+        if (res == -1)
+        {
+            return -1;
+        }
         else if (res == 0)
         {
             return main_server(conf);
         }
-        return res;
+        return 0;*/
     }
     return 1;
 }

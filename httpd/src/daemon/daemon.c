@@ -72,13 +72,14 @@ int daemon_stop(struct config *conf)
     pid_t pid;
     fp = fopen(conf->pid_file, "r");
     if (fp == NULL) // error
-        return 0;
+        return 1;
     char *line = NULL;
     size_t len = 0;
     ssize_t nread;
     if ((nread = getline(&line, &len, fp)) != -1)
     {
         pid = atoi(line);
+        //printf("pid:%d\n", pid);
         if (kill(pid, 0) != -1) // Process alive
         {
             kill(pid, SIGINT); // Kill process
@@ -98,5 +99,5 @@ int daemon_restart(struct config *conf)
 {
     daemon_stop(conf);
     int res = daemon_start(conf);
-    return (res == 0 || res == 1) ? 0 : 1;
+    return res;
 }

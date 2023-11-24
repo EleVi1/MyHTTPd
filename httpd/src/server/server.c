@@ -8,6 +8,10 @@
 #include <sys/stat.h>
 #include <time.h>
 
+#include "../utils/itoa/itoa.h"
+
+int loop = 1;
+
 // Catch the request and respond
 void communicate(int client_sock, struct config *conf)
 {
@@ -25,7 +29,6 @@ void communicate(int client_sock, struct config *conf)
             {
                 req->error = 200; // OK
             }
-            // log_write(conf, req, "Received");
             send_response(client_sock, conf, req);
             close(client_sock);
             return;
@@ -38,9 +41,10 @@ void communicate(int client_sock, struct config *conf)
     return;
 }
 
-static int send_error(int client_sock, struct request *req)
+static int send_error(int client_sock, struct request *req, struct string *str)
 {
-    struct string *resp = string_create("HTTP/1.1 ", 9);
+    string_destroy(str);
+    struct string *resp = string_create("HTTP/1.1", 8);
     if (req->error == 400)
     {
         string_concat_str(resp, " 400 Bad Request\r\n", 18);
@@ -59,14 +63,18 @@ static int send_error(int client_sock, struct request *req)
     }
     else if (req->error == 404)
     {
-        string_concat_str(resp, " 404 Not found\r\n", 16);
+        string_concat_str(resp, " 404 Not Found\r\n", 16);
     }
     char buf[1000];
     time_t now = time(0);
     struct tm tm = *gmtime(&now);
     strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S %Z", &tm);
+    string_concat_str(resp, "Date: ", 6);
     string_concat_str(resp, buf, strlen(buf));
     string_concat_str(resp, "\r\n", 2);
+    string_concat_str(resp, "Connection: close\r\n\r\n", 21);
+    // string_concat_str(resp, "\0", 1);
+    // printf("%s\n", resp->data);
     send(client_sock, resp->data, resp->size, MSG_NOSIGNAL);
     string_destroy(resp);
     return 0;
@@ -82,34 +90,77 @@ static size_t str_len(char *s)
     return i;
 }
 
+static int is_slash(char *s, size_t n)
+{
+    return (s[n - 1] == '/');
+}
+
+static int get_filesize(FILE *fd, char *body)
+{
+    char c;
+    int s = 0;
+    while ((c = fgetc(fd)) != EOF)
+    {
+        body[s] = c;
+        s++;
+    }
+    return s;
+}
+
 static int send_correct(int client_sock, struct config *conf,
                         struct request *req)
 {
     struct stat sb;
-    struct string *name = string_create(conf->servers->root_dir,
-                                        str_len(conf->servers->root_dir));
+    size_t len = str_len(conf->servers->root_dir);
+    struct string *name;
+    if (is_slash(conf->servers->root_dir, len))
+        name = string_create(conf->servers->root_dir, len - 1);
+    else
+        name = string_create(conf->servers->root_dir, len);
     string_concat_str(name, req->target->data, req->target->size);
     int stated = stat(name->data, &sb);
-    if (stated == -1) // Doesn't exist
+    if (stated == -1)
     {
         req->error = 404;
-        string_destroy(name);
-        return send_error(client_sock, req);
+        return send_error(client_sock, req, name);
     }
-    int fd = open(name->data, O_RDONLY);
-    if (fd == -1)
+    FILE *fd = fopen(name->data, "r");
+    if (fd == NULL)
     {
         req->error = 403;
-        string_destroy(name);
-        return send_error(client_sock, req);
+        return send_error(client_sock, req, name);
     }
+    char *body = calloc(10000, sizeof(char));
+    int size = get_filesize(fd, body);
+    fclose(fd);
+
     struct string *resp = string_create("HTTP/1.1 200 OK\r\n", 17);
+
     char buf[1000];
     time_t now = time(0);
     struct tm tm = *gmtime(&now);
     strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S %Z", &tm);
+    string_concat_str(resp, "Date: ", 6);
     string_concat_str(resp, buf, strlen(buf));
     string_concat_str(resp, "\r\n", 2);
+
+    if (size > 0)
+    {
+        string_concat_str(resp, "Content-length: ", 16);
+        char *nb = calloc(10, sizeof(char));
+        nb = my_itoa(size, nb, "0123456789");
+        string_concat_str(resp, nb, str_len(nb));
+        free(nb);
+        string_concat_str(resp, "\r\n", 2);
+    }
+    string_concat_str(resp, "Connection: close\r\n\r\n", 21);
+    // string_concat_str(resp, "\0", 1);
+    // printf("%s\n", resp->data);
+    send(client_sock, resp->data, resp->size, MSG_NOSIGNAL);
+    if (size > 0)
+    {
+        send(client_sock, body, size, MSG_NOSIGNAL);
+    }
     string_destroy(resp);
     return 0;
 }
@@ -120,12 +171,26 @@ int send_response(int client_sock, struct config *conf, struct request *req)
         return -1;
     if (req->error != 200)
     {
-        send_error(client_sock, req);
+        send_error(client_sock, req, NULL);
         return 1;
     }
     send_correct(client_sock, conf, req);
     return 0;
 }
+
+static void handler(int signal)
+{
+    switch (signal)
+    {
+    case SIGINT:
+    {
+        loop = 0;
+    }
+    default:
+        break;
+    }
+}
+
 
 void link_accept(int sockfd, struct config *conf)
 {
@@ -134,8 +199,18 @@ void link_accept(int sockfd, struct config *conf)
         return;
     }
     int client_sock;
-    // Put signal handler TODO
-    while (1)
+    
+    struct sigaction sa;
+    sa.sa_flags = 0;
+    sa.sa_handler = handler;
+    // Initialize mask
+    if (sigemptyset(&sa.sa_mask) < 0)
+    {
+    }
+    if (sigaction(SIGINT, &sa, NULL) < 0)
+    {
+    }
+    while (loop)
     {
         client_sock = accept(sockfd, NULL, NULL);
         if (client_sock != -1)
@@ -145,6 +220,7 @@ void link_accept(int sockfd, struct config *conf)
             close(client_sock);
         }
     }
+    //printf("UWU\n");
 }
 
 int initialize(char *ipv4, char *port)
@@ -171,20 +247,17 @@ int initialize(char *ipv4, char *port)
         // Fail to socket
         if (listening_sock == -1)
         {
-            // perror("server: socket");
             continue;
         }
         if (setsockopt(listening_sock, SOL_SOCKET, SO_REUSEADDR, &oui,
                        sizeof(int))
             == -1)
         {
-            // perror("server: setsockopt");
             exit(1);
         }
         // Fail to bind
         if (bind(listening_sock, tmp->ai_addr, tmp->ai_addrlen) == -1)
         {
-            // perror("server: bind");
             close(listening_sock);
             continue;
         }
@@ -193,7 +266,6 @@ int initialize(char *ipv4, char *port)
     freeaddrinfo(server_info);
     if (!tmp)
     {
-        // fprintf(stderr, "server: failed to bind\n");
         return -1;
     }
     return listening_sock;
