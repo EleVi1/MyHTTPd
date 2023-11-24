@@ -27,10 +27,12 @@ void communicate(int client_sock, struct config *conf)
         {
             if (req->error == 0)
             {
-                req->error = 200; // OK
+                req->error = 200;
             }
             send_response(client_sock, conf, req);
             close(client_sock);
+            free_request(req); // Added
+            string_destroy(input); // Added
             return;
         }
         // send(client_sock, buff, nread, MSG_NOSIGNAL);
@@ -38,6 +40,7 @@ void communicate(int client_sock, struct config *conf)
     // req = parse_request(input, conf);
     // send_response(client_sock, conf, req, fd);
     close(client_sock);
+    string_destroy(input); // Added
     return;
 }
 
@@ -134,26 +137,23 @@ static int send_correct(int client_sock, struct config *conf,
     int size = get_filesize(fd, body);
     fclose(fd);
 
-    struct string *resp = string_create("HTTP/1.1 200 OK\r\n", 17);
+    struct string *resp = string_create("HTTP/1.1 200 OK\r\nDate: ", 23);
 
     char buf[1000];
     time_t now = time(0);
     struct tm tm = *gmtime(&now);
     strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S %Z", &tm);
-    string_concat_str(resp, "Date: ", 6);
     string_concat_str(resp, buf, strlen(buf));
-    string_concat_str(resp, "\r\n", 2);
 
     if (size > 0)
     {
-        string_concat_str(resp, "Content-length: ", 16);
+        string_concat_str(resp, "\r\nContent-length: ", 18);
         char *nb = calloc(10, sizeof(char));
         nb = my_itoa(size, nb, "0123456789");
         string_concat_str(resp, nb, str_len(nb));
         free(nb);
-        string_concat_str(resp, "\r\n", 2);
     }
-    string_concat_str(resp, "Connection: close\r\n\r\n", 21);
+    string_concat_str(resp, "\r\nConnection: close\r\n\r\n", 23);
     // string_concat_str(resp, "\0", 1);
     // printf("%s\n", resp->data);
     send(client_sock, resp->data, resp->size, MSG_NOSIGNAL);
@@ -161,7 +161,9 @@ static int send_correct(int client_sock, struct config *conf,
     {
         send(client_sock, body, size, MSG_NOSIGNAL);
     }
+    free(body);
     string_destroy(resp);
+    string_destroy(name); // Added
     return 0;
 }
 
@@ -182,15 +184,13 @@ static void handler(int signal)
 {
     switch (signal)
     {
-    case SIGINT:
-    {
+    case SIGINT: {
         loop = 0;
     }
     default:
         break;
     }
 }
-
 
 void link_accept(int sockfd, struct config *conf)
 {
@@ -199,17 +199,15 @@ void link_accept(int sockfd, struct config *conf)
         return;
     }
     int client_sock;
-    
+
     struct sigaction sa;
     sa.sa_flags = 0;
     sa.sa_handler = handler;
     // Initialize mask
     if (sigemptyset(&sa.sa_mask) < 0)
-    {
-    }
+    {}
     if (sigaction(SIGINT, &sa, NULL) < 0)
-    {
-    }
+    {}
     while (loop)
     {
         client_sock = accept(sockfd, NULL, NULL);
@@ -220,7 +218,7 @@ void link_accept(int sockfd, struct config *conf)
             close(client_sock);
         }
     }
-    //printf("UWU\n");
+    // printf("UWU\n");
 }
 
 int initialize(char *ipv4, char *port)

@@ -114,7 +114,7 @@ int main(int argc, char *argv[])
         if (!conf)
         {
             config_destroy(conf);
-            errx(2, "http: invalid configuration file");
+            return 2;
         }
         // Run server without deamonizing it
         return main_server(conf);
@@ -128,7 +128,7 @@ int main(int argc, char *argv[])
             if (!conf)
             {
                 config_destroy(conf);
-                errx(2, "http: invalid configuration file");
+                return 2;
             }
             // printf("Valid configuration file\n");
             config_destroy(conf);
@@ -137,6 +137,6 @@ int main(int argc, char *argv[])
         return 1;
     }
     int res = parse_input(argc, argv, conf);
-    // config_destroy(conf);
+    config_destroy(conf);
     return res;
 }
