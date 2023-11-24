@@ -1,8 +1,9 @@
+#include <fnmatch.h>
+
 #define _POSIX_C_SOURCE 200809L
 
-#include "http.h"
-
 #include "../logger/logger.h"
+#include "http.h"
 
 static size_t str_len(char *s)
 {
@@ -37,6 +38,10 @@ char *parse_line(struct string *str, size_t *begin, size_t *len)
             {
                 res = realloc(res, *(len) + 1);
                 *begin = i + 2;
+                if (*begin == str->size)
+                {
+                    return "error";
+                }
                 return res;
             }
             free(res);
@@ -225,7 +230,7 @@ static struct request *check_headers(char *input, struct request *req,
                                      struct config *conf, size_t *len)
 {
     char *line = input;
-    if (fnmatch("Content-Length: *", line, 0) == 0) // FNM_CASEFOLD
+    if (fnmatch("Content-Length: *", line, FNM_CASEFOLD) == 0) // FNM_CASEFOLD
     {
         if (*len > 16)
         {
@@ -238,7 +243,7 @@ static struct request *check_headers(char *input, struct request *req,
         }
         return req;
     }
-    if (fnmatch("Host: *", line, 0) == 0) // FNM_CASEFOLD
+    if (fnmatch("Host: *", line, FNM_CASEFOLD) == 0) // FNM_CASEFOLD
     {
         if (str_len(input) > 6)
         {
@@ -296,7 +301,7 @@ struct request *parse_request(struct string *input, struct config *config)
     size_t len = 0;
     struct request *req = calloc(1, sizeof(struct request));
     while ((line = parse_line(input, &begin, &len)) != NULL
-           && strcmp("\r\n", line) != 0)
+           && strcmp("\r\n", line) != 0 && strcmp("error", line) != 0)
     {
         if (line_nb == 0) // Request line
         {
@@ -340,6 +345,11 @@ struct request *parse_request(struct string *input, struct config *config)
         }
     }
     // not a finished line or CRLF headers ending
+    if (strcmp(line, "error") == 0)
+    {
+        req->error = 400;
+        return req;
+    }
     free(req);
     free(line);
     return NULL;

@@ -135,7 +135,7 @@ static int send_correct(int client_sock, struct config *conf,
         req->error = 403;
         return send_error(client_sock, conf, req, name);
     }
-    char *body = calloc(10000, sizeof(char));
+    char *body = calloc(20000, sizeof(char));
     int size = get_filesize(fd, body);
     fclose(fd);
 
