@@ -29,22 +29,23 @@ void communicate(int client_sock, struct config *conf)
             {
                 req->error = 200;
             }
+            log_write(conf, req, "Received");
             send_response(client_sock, conf, req);
             close(client_sock);
-            free_request(req); // Added
-            string_destroy(input); // Added
+            free_request(req);
+            string_destroy(input);
             return;
         }
-        // send(client_sock, buff, nread, MSG_NOSIGNAL);
     }
     // req = parse_request(input, conf);
     // send_response(client_sock, conf, req, fd);
     close(client_sock);
-    string_destroy(input); // Added
+    string_destroy(input);
     return;
 }
 
-static int send_error(int client_sock, struct request *req, struct string *str)
+static int send_error(int client_sock, struct config *conf, struct request *req,
+                      struct string *str)
 {
     string_destroy(str);
     struct string *resp = string_create("HTTP/1.1", 8);
@@ -79,6 +80,7 @@ static int send_error(int client_sock, struct request *req, struct string *str)
     // string_concat_str(resp, "\0", 1);
     // printf("%s\n", resp->data);
     send(client_sock, resp->data, resp->size, MSG_NOSIGNAL);
+    log_write(conf, req, "Sent"); // ADDED
     string_destroy(resp);
     return 0;
 }
@@ -125,13 +127,13 @@ static int send_correct(int client_sock, struct config *conf,
     if (stated == -1)
     {
         req->error = 404;
-        return send_error(client_sock, req, name);
+        return send_error(client_sock, conf, req, name);
     }
     FILE *fd = fopen(name->data, "r");
     if (fd == NULL)
     {
         req->error = 403;
-        return send_error(client_sock, req, name);
+        return send_error(client_sock, conf, req, name);
     }
     char *body = calloc(10000, sizeof(char));
     int size = get_filesize(fd, body);
@@ -161,9 +163,10 @@ static int send_correct(int client_sock, struct config *conf,
     {
         send(client_sock, body, size, MSG_NOSIGNAL);
     }
+    log_write(conf, req, "Sent"); // ADDED
     free(body);
     string_destroy(resp);
-    string_destroy(name); // Added
+    string_destroy(name);
     return 0;
 }
 
@@ -173,7 +176,7 @@ int send_response(int client_sock, struct config *conf, struct request *req)
         return -1;
     if (req->error != 200)
     {
-        send_error(client_sock, req, NULL);
+        send_error(client_sock, conf, req, NULL);
         return 1;
     }
     send_correct(client_sock, conf, req);

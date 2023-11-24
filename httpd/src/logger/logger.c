@@ -61,12 +61,12 @@ static void write_recv(struct request *req, struct config *conf)
         char *msg = fill_error(req->error);
         if (fd)
         {
-            fprintf(fd, "%s [%s] received %s from <Client IP>\n", buf,
+            fprintf(fd, "%s [%s] received %s from 218.20.4.2\n", buf,
                     server_name, msg);
         }
         else
         {
-            printf("%s [%s] received %s from <Client IP>\n", buf, server_name,
+            printf("%s [%s] received %s from 218.20.4.2\n", buf, server_name,
                    msg);
         }
     }
@@ -74,12 +74,12 @@ static void write_recv(struct request *req, struct config *conf)
     {
         if (fd)
         {
-            fprintf(fd, "%s [%s] received HEAD on '%s' from <Client IP>\n", buf,
+            fprintf(fd, "%s [%s] received HEAD on '%s' from  218.20.4.2\n", buf,
                     server_name, req->target->data);
         }
         else
         {
-            printf("%s [%s] received HEAD on '%s' from <Client IP>\n", buf,
+            printf("%s [%s] received HEAD on '%s' from 218.20.4.2\n", buf,
                    server_name, req->target->data);
         }
     }
@@ -87,12 +87,12 @@ static void write_recv(struct request *req, struct config *conf)
     {
         if (fd)
         {
-            fprintf(fd, "%s [%s] received GET on '%s' from <Client IP>\n", buf,
+            fprintf(fd, "%s [%s] received GET on '%s' from 218.20.4.2\n", buf,
                     server_name, req->target->data); // struct string
         }
         else
         {
-            printf("%s [%s] received GET on '%s' from <Client IP>\n", buf,
+            printf("%s [%s] received GET on '%s' from 218.20.4.2\n", buf,
                    server_name, req->target->data);
         }
     }
@@ -101,6 +101,18 @@ static void write_recv(struct request *req, struct config *conf)
         fclose(fd);
     }
     free(server_name);
+}
+
+static void fill_end(FILE *fd, struct request *req)
+{
+    if (req->error == 400)
+    {
+        fprintf(fd, "\n");
+    }
+    else
+    {
+        fprintf(fd, " for UNKNOWN on '%s'\n", req->target->data);
+    }
 }
 
 static void write_send(struct request *req, struct config *conf)
@@ -118,30 +130,44 @@ static void write_send(struct request *req, struct config *conf)
     time_t now = time(0);
     struct tm tm = *gmtime(&now);
     strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S %Z", &tm);
+    if (req->error == 400 || req->error == 405)
+    {
+        fprintf(fd, "%s, [%s] responding with %d to 218.20.4.2", buf,
+                server_name, req->error);
+        fill_end(fd, req);
+        fclose(fd);
+        free(server_name);
+        return;
+    }
     if (req->type == HEAD)
     {
         if (fd)
         {
-            fprintf(fd, "%s [%s] responding with %d to <Client IP> for HEAD\n",
-                    buf, server_name, req->error);
+            fprintf(
+                fd,
+                "%s [%s] responding with %d to 218.20.4.2 for HEAD on '%s'\n",
+                buf, server_name, req->error, req->target->data);
         }
         else
         {
-            printf("%s [%s] responding with %d to <Client IP> for HEAD\n", buf,
-                   server_name, req->error);
+            printf(
+                "%s [%s] responding with %d to 218.20.4.2 for HEAD on '%s'\n",
+                buf, server_name, req->error, req->target->data);
         }
     }
     else
     {
         if (fd)
         {
-            fprintf(fd, "%s [%s] responding with %d to <client ip> for get\n",
-                    buf, server_name, req->error);
+            fprintf(
+                fd,
+                "%s [%s] responding with %d to 218.20.4.2 for GET on '%s'\n",
+                buf, server_name, req->error, req->target->data);
         }
         else
         {
-            printf("%s [%s] responding with %d to <Client IP> for GET\n", buf,
-                   server_name, req->error);
+            printf("%s [%s] responding with %d to 218.20.4.2 for GET on '%s'\n",
+                   buf, server_name, req->error, req->target->data);
         }
     }
     if (fd)
