@@ -72,7 +72,7 @@ int daemon_stop(struct config *conf)
     pid_t pid;
     fp = fopen(conf->pid_file, "r");
     if (fp == NULL) // error
-        return 1;
+        return 0;
     char *line = NULL;
     size_t len = 0;
     ssize_t nread;
