@@ -1,12 +1,12 @@
 ---
 
-### Project HTTPd
+# Project HTTPd
 
 The goal of this project is to write a HTTP1 server, following the HTTP/1.1 specification.
 The implementation of the HTTP server follows a defined protocol. This protocol is defined in the RFCs.
 The HTTP server must be able to run as a daemon.
 
-# Epoll
+## Epoll
 Preliminary exercise
 
 Epoll is a Linux kernel syscall that allows you to monitor multiple file descriptors and receive an event when an I/O operation is possible on them. You SHOULD read the epoll(7) man page carefully, as it contains all the information you need about this syscall.
