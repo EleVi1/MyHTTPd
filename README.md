@@ -26,3 +26,6 @@ The epoll usage flow, from a high-level perspective, is as follows:
     Declare your interest in a file descriptor to epoll using epoll_ctl(2).
 
     Wait for new events using epoll_wait(2).
+
+## License
+Individual project made at EPITA
